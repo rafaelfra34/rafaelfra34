@@ -34,8 +34,8 @@ jobs:
 
       - name: Restore PressFran v2.1
         run: |
-          cat v21/pf.part00 v21/pf.part01 v21/pf.part02 v21/pf.part03 v21/pf.part04 v21/pf.part05 > v21/project.b64
-          base64 -d v21/project.b64 > v21/project.zip
+          cat v21/pf.part00 v21/pf.part01 v21/pf.part02 v21/pf.part03 v21/pf.part04 v21/pf.part05 | tr -d '\r\n ' > v21/project.b64
+          base64 -d -i v21/project.b64 > v21/project.zip
           unzip -t v21/project.zip
           unzip -q v21/project.zip
 
