@@ -65,12 +65,13 @@ jobs:
           unzip -t v21/project.zip
           unzip -q v21/project.zip
 
-      - name: Apply v2.2 SMS automation patch
+      - name: Apply verified v2.2 SMS source overlay
         run: |
-          cat v22/patch.part00 v22/patch.part01 v22/patch.part02 v22/patch.part03 > v22/patch.py
-          python3 v22/patch.py
+          tar -xzf v22/overlay.tar.gz -C PressFran_Cobranzas_Android
           grep -q 'versionName "2.2"' PressFran_Cobranzas_Android/app/build.gradle
           grep -q 'android.permission.SEND_SMS' PressFran_Cobranzas_Android/app/src/main/AndroidManifest.xml
+          test -f PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/SmsSender.java
+          test -f PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/SmsStatusReceiver.java
 
       - name: Build APK
         working-directory: PressFran_Cobranzas_Android
