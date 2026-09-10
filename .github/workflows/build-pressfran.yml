@@ -24,6 +24,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -31,8 +34,10 @@ jobs:
 
       - name: Restore PressFran project
         run: |
-          base64 -d pressfran_project.zip.b64 > pressfran.zip
+          cat pressfran_parts/part*.b64 > pressfran_project.complete.b64
+          base64 -d pressfran_project.complete.b64 > pressfran.zip
           unzip -q pressfran.zip
+          test -f PressFran_Cobranzas_Android/settings.gradle
 
       - name: Build debug APK
         working-directory: PressFran_Cobranzas_Android
