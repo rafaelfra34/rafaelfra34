@@ -51,11 +51,9 @@ jobs:
                       candidate=s[:i]+ch+s[i:]
                       if git_hash(candidate)==target:
                           found=candidate
-                          print('Repaired missing base64 character at',i)
                           break
                   if found: break
-              if not found:
-                  raise SystemExit('Could not reconstruct exact part00')
+              if not found: raise SystemExit('Could not reconstruct exact part00')
               s=found
           parts=[s]
           for i in range(1,6): parts.append(Path(f'v21/pf.part{i:02d}').read_text().strip())
@@ -65,9 +63,12 @@ jobs:
           unzip -t v21/project.zip
           unzip -q v21/project.zip
 
-      - name: Apply verified v2.2 SMS source overlay
+      - name: Apply verified v2.2 SMS source files
         run: |
-          tar -xzf v22/overlay.tar.gz -C PressFran_Cobranzas_Android
+          cp -a v22files/app/. PressFran_Cobranzas_Android/app/
+          gzip -dc v22files-gz/DbHelper.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
+          gzip -dc v22files-gz/MainActivity.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+          gzip -dc v22files-gz/MessageBuilder.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MessageBuilder.java
           grep -q 'versionName "2.2"' PressFran_Cobranzas_Android/app/build.gradle
           grep -q 'android.permission.SEND_SMS' PressFran_Cobranzas_Android/app/src/main/AndroidManifest.xml
           test -f PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/SmsSender.java
