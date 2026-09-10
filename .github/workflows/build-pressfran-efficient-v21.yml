@@ -3,7 +3,7 @@ name: Build PressFran Efficient APK
 on:
   push:
     branches: [pressfran-efficient-v2]
-    paths: ['v21src/READY']
+    paths: ['v21/READY']
   workflow_dispatch:
 
 permissions:
@@ -33,12 +33,45 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Restore exact PressFran v2.1 project
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('v21/pf.part00')
+          s=p.read_text().strip()
+          target='535f8ccb2eaac487f07a123a3e428ea5fd651242'
+          alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+          def git_hash(x):
+              b=x.encode()
+              return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          if git_hash(s)!=target:
+              found=None
+              for i in range(len(s)+1):
+                  for ch in alphabet:
+                      candidate=s[:i]+ch+s[i:]
+                      if git_hash(candidate)==target:
+                          found=candidate
+                          print('Repaired missing base64 character at',i)
+                          break
+                  if found: break
+              if not found:
+                  raise SystemExit('Could not reconstruct exact part00')
+              s=found
+          parts=[s]
+          for i in range(1,6): parts.append(Path(f'v21/pf.part{i:02d}').read_text().strip())
+          Path('v21/project.b64').write_text(''.join(parts))
+          PY
+          base64 -d v21/project.b64 > v21/project.zip
+          unzip -t v21/project.zip
+          unzip -q v21/project.zip
+
       - name: Build APK
-        working-directory: v21src
+        working-directory: PressFran_Cobranzas_Android
         run: gradle --no-daemon assembleDebug
 
       - name: Rename APK
-        run: cp v21src/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.1.apk
+        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
