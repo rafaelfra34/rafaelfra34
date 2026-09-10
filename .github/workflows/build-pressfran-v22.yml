@@ -1,0 +1,81 @@
+name: Build PressFran SMS v2.2 APK
+
+on:
+  push:
+    branches: [pressfran-sms-v22]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 35
+        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore PressFran v2.1 base
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,hashlib,zipfile
+          parts=[Path(f'v21/pf.part0{i}').read_text() for i in range(6)]
+          target='5cb77b85c1ae654c3c83747df05f5e8fbca6ec25'
+          # part00 lost one char in the original transport. Recover it by Git blob SHA.
+          alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+          p=parts[0]
+          if hashlib.sha1((f'blob {len(p)}\0'+p).encode()).hexdigest()!=target:
+              found=None
+              for pos in range(len(p)+1):
+                  for ch in alphabet:
+                      cand=p[:pos]+ch+p[pos:]
+                      h=hashlib.sha1((f'blob {len(cand)}\0'+cand).encode()).hexdigest()
+                      if h==target:
+                          found=cand;break
+                  if found:break
+              if not found: raise SystemExit('Could not restore part00')
+              parts[0]=found
+          data=base64.b64decode(''.join(parts))
+          Path('project.zip').write_bytes(data)
+          with zipfile.ZipFile('project.zip') as z:z.extractall('.')
+          PY
+
+      - name: Apply v2.2 SMS automation patch
+        run: |
+          cat v22/patch.part00 v22/patch.part01 v22/patch.part02 v22/patch.part03 > v22/patch.py
+          python3 v22/patch.py
+          grep -q 'versionName "2.2"' PressFran_Cobranzas_Android/app/build.gradle
+          grep -q 'android.permission.SEND_SMS' PressFran_Cobranzas_Android/app/src/main/AndroidManifest.xml
+
+      - name: Build APK
+        working-directory: PressFran_Cobranzas_Android
+        run: gradle --no-daemon assembleDebug
+
+      - name: Rename APK
+        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.2-SMS.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PressFran-Cobranzas-v2.2-SMS
+          path: PressFran-Cobranzas-v2.2-SMS.apk
+          if-no-files-found: error
+          retention-days: 30
