@@ -1,0 +1,2 @@
+PressFran Cobranzas Android
+Compilación automática de APK desde la rama pressfran-cobranzas.
