@@ -1,8 +1,8 @@
-name: Build PressFran SMS v2.2 APK
+name: Build PressFran SMS v2.2 Paralela APK
 
 on:
   push:
-    branches: [pressfran-sms-v22]
+    branches: [pressfran-sms-v22-paralela]
   workflow_dispatch:
 
 permissions:
@@ -63,13 +63,14 @@ jobs:
           unzip -t v21/project.zip
           unzip -q v21/project.zip
 
-      - name: Apply verified v2.2 SMS source files
+      - name: Apply parallel v2.2 SMS source files
         run: |
           cp -a v22files/app/. PressFran_Cobranzas_Android/app/
           gzip -dc v22files-gz/DbHelper.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
           gzip -dc v22files-gz/MainActivity.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
           gzip -dc v22files-gz/MessageBuilder.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MessageBuilder.java
-          grep -q 'versionName "2.2"' PressFran_Cobranzas_Android/app/build.gradle
+          grep -q 'applicationId "com.pressfran.cobranzas.sms"' PressFran_Cobranzas_Android/app/build.gradle
+          grep -q 'versionName "2.2-paralela"' PressFran_Cobranzas_Android/app/build.gradle
           grep -q 'android.permission.SEND_SMS' PressFran_Cobranzas_Android/app/src/main/AndroidManifest.xml
           test -f PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/SmsSender.java
           test -f PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/SmsStatusReceiver.java
@@ -79,12 +80,12 @@ jobs:
         run: gradle --no-daemon assembleDebug
 
       - name: Rename APK
-        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.2-SMS.apk
+        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.2-SMS-Paralela.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PressFran-Cobranzas-v2.2-SMS
-          path: PressFran-Cobranzas-v2.2-SMS.apk
+          name: PressFran-Cobranzas-v2.2-SMS-Paralela
+          path: PressFran-Cobranzas-v2.2-SMS-Paralela.apk
           if-no-files-found: error
           retention-days: 30
