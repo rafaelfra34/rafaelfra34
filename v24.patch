@@ -1,0 +1,126 @@
+--- PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
++++ PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+@@ -183,16 +183,20 @@
+         name=input("Nombre y apellido *",false);dni=input("DNI",false);phone=input("Celular con código país *",false);phone.setInputType(InputType.TYPE_CLASS_PHONE);business=input("Comercio / emprendimiento",false);address=input("Domicilio / localidad",false);guarantor=input("Garante",false);customerNotes=input("Observaciones del cliente",false);p.addView(name);p.addView(dni);p.addView(phone);clientSms=new CheckBox(this);clientSms.setText("Cliente autoriza recordatorios SMS automáticos");p.addView(clientSms);p.addView(business);p.addView(address);p.addView(guarantor);p.addView(customerNotes);
+ 
+         p.addView(section("Préstamo"));loanType=spinner(new String[]{"Préstamo","Renovación","Refinanciación"});p.addView(label("Tipo de operación"));p.addView(loanType,margins(-1,dp(50),0,0,0,8));amount=input("Monto entregado / refinanciado en $ *",true);p.addView(amount);p.addView(label("Montos rápidos"));p.addView(amountQuickRow());
+-        count=input("Cantidad de cuotas *",true);rate=input("Interés por período (%)",true);p.addView(count);p.addView(countQuickRow());p.addView(rate);
+-        frequency=spinner(new String[]{"Semanal","Quincenal","Mensual"});p.addView(label("Frecuencia"));p.addView(frequency,margins(-1,dp(50),0,0,0,8));
+-        installment=input("Valor de cada cuota en $",true);due=input("Primer vencimiento",false);due.setFocusable(false);due.setClickable(true);due.setOnClickListener(v->pickDate(due));moraLoan=input("Mora diaria (%)",true);graceLoan=input("Días de gracia",true);loanNotes=input("Observaciones del préstamo",false);p.addView(installment);p.addView(due);p.addView(moraLoan);p.addView(graceLoan);p.addView(loanNotes);
++        count=input("Cantidad de cuotas *",true);rate=input("Interés por período (%)",true);p.addView(label("Cantidad de cuotas"));p.addView(count);p.addView(countQuickRow());p.addView(label("Interés por período (%)"));p.addView(rate);
++        frequency=spinner(new String[]{"Semanal","Quincenal","Mensual"});p.addView(label("Frecuencia de pago"));p.addView(frequency,margins(-1,dp(50),0,0,0,8));
++        installment=input("Valor de cada cuota en $",true);due=input("Primer vencimiento",false);due.setFocusable(false);due.setClickable(true);due.setOnClickListener(v->pickDate(due));moraLoan=input("Mora diaria (%)",true);graceLoan=input("Días de gracia",true);loanNotes=input("Observaciones del préstamo",false);
++        p.addView(label("Valor de cada cuota"));p.addView(installment);p.addView(label("Primer vencimiento"));p.addView(due);p.addView(label("Días de gracia después del vencimiento"));p.addView(graceLoan);p.addView(label("Mora diaria después de la gracia (%)"));p.addView(moraLoan);p.addView(loanNotes);
+         Button calc=secondary("Calcular plan");calc.setOnClickListener(v->calculatePlan());p.addView(calc);
+         planPreview=text("",15,Typeface.BOLD);planPreview.setBackgroundColor(Color.WHITE);planPreview.setPadding(dp(12),dp(12),dp(12),dp(12));p.addView(planPreview,margins(-1,-2,0,8,0,10));
+         Button save=primary("Guardar préstamo");save.setOnClickListener(v->saveLoan());p.addView(save);return p;
+     }
+ 
+     private LinearLayout buildCustomers(){
+-        LinearLayout p=panel();p.addView(section("Clientes"));searchCustomer=input("Buscar por nombre, comercio, DNI o teléfono",false);p.addView(searchCustomer);searchCustomer.addTextChangedListener(new SimpleWatcher(){@Override public void changed(){refreshCustomers();}});customersList=new LinearLayout(this);customersList.setOrientation(LinearLayout.VERTICAL);p.addView(customersList);return p;
++        LinearLayout p=panel();p.addView(section("Clientes"));
++        Button add=primary("+ Agregar cliente");add.setOnClickListener(v->addCustomerIndependent());p.addView(add,margins(-1,dp(48),0,0,0,10));
++        searchCustomer=input("Buscar por nombre, comercio, DNI o teléfono",false);p.addView(searchCustomer);searchCustomer.addTextChangedListener(new SimpleWatcher(){@Override public void changed(){refreshCustomers();}});
++        customersList=new LinearLayout(this);customersList.setOrientation(LinearLayout.VERTICAL);p.addView(customersList);return p;
+     }
+ 
+     private LinearLayout amountQuickRow(){HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);int[] vals={100000,200000,300000,400000,500000};for(int v:vals){Button b=chip(MessageBuilder.money(v));b.setOnClickListener(x->{amount.setText(String.valueOf(v));calculatePlan();});row.addView(b);}hs.addView(row);LinearLayout wrap=new LinearLayout(this);wrap.addView(hs,new LinearLayout.LayoutParams(-1,dp(48)));return wrap;}
+@@ -220,7 +224,19 @@
+     private void selectCustomer(long id){for(int i=0;i<customerCache.size();i++)if(customerCache.get(i).id==id){customerSelector.setSelection(i+1);return;}}
+ 
+     private void calculatePlan(){
+-        double principal=num(amount,0),r=num(rate,0);int n=Math.max(0,(int)num(count,0));if(principal<=0||n<=0){planPreview.setText("Ingresá el monto y la cantidad de cuotas.");return;}double total=principal*(1+(r/100.0)*n);double q=Math.round(total/n);total=q*n;installment.setText(String.valueOf(Math.round(q)));planPreview.setText("Monto: "+MessageBuilder.money(principal)+"\nInterés: "+trim(r)+"% por período × "+n+"\nTotal financiado: "+MessageBuilder.money(total)+"\nCuota: "+MessageBuilder.money(q)+" · "+frequency.getSelectedItem());
++        double principal=num(amount,0),r=num(rate,0),mora=num(moraLoan,3);int n=Math.max(0,(int)num(count,0)),grace=Math.max(0,(int)num(graceLoan,3));
++        if(principal<=0||n<=0){planPreview.setText("Ingresá el monto y la cantidad de cuotas.");return;}
++        double contractualInterest=principal*(r/100.0)*n;double total=principal+contractualInterest;double q=Math.round(total/n);total=q*n;contractualInterest=total-principal;installment.setText(String.valueOf(Math.round(q)));
++        String firstDue=due==null?"":due.getText().toString().trim();
++        planPreview.setText("DETALLE DEL PLAN\n"+
++                "Monto entregado: "+MessageBuilder.money(principal)+"\n"+
++                "Interés: "+trim(r)+"% por período × "+n+"\n"+
++                "Interés total pactado: "+MessageBuilder.money(contractualInterest)+"\n"+
++                "Total financiado: "+MessageBuilder.money(total)+"\n"+
++                "Cuota: "+MessageBuilder.money(q)+" · "+frequency.getSelectedItem()+"\n"+
++                "Primer vencimiento: "+(firstDue.isEmpty()?"—":pretty(firstDue))+"\n"+
++                "Días de gracia: "+grace+"\n"+
++                "Mora luego de la gracia: "+trim(mora)+"% diario");
+     }
+ 
+     private void saveLoan(){
+@@ -256,7 +272,9 @@
+     }
+ 
+     private View customerCard(Client c){
+-        LinearLayout card=card();TextView h=text(c.name,18,Typeface.BOLD);h.setTextColor(green);card.addView(h);if(!c.business.isEmpty())card.addView(text(c.business,14,Typeface.BOLD));double bal=db.customerBalance(c.id);int loans=db.customerActiveLoans(c.id);String info="DNI: "+dash(c.dni)+" · Celular: "+dash(c.phone)+"\nSMS automático: "+(c.smsEnabled?"Sí":"No")+" · Préstamos activos: "+loans+"\nSaldo total: "+MessageBuilder.money(bal);card.addView(text(info,14,Typeface.NORMAL),margins(-1,-2,0,5,0,7));LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);Button open=small("Abrir ficha"),newLoan=small("Nuevo préstamo"),edit=small("Editar");row.addView(open,weight44());row.addView(newLoan,weight44());row.addView(edit,weight44());card.addView(row);open.setOnClickListener(v->showCustomerSheet(c));newLoan.setOnClickListener(v->{prepareNewLoan(c,null);showPanel(loanPanel);});edit.setOnClickListener(v->editCustomer(c));return card;
++        LinearLayout card=card();TextView h=text(c.name,18,Typeface.BOLD);h.setTextColor(green);card.addView(h);if(!c.business.isEmpty())card.addView(text(c.business,14,Typeface.BOLD));double bal=db.customerBalance(c.id);int loans=db.customerActiveLoans(c.id);String info="DNI: "+dash(c.dni)+" · Celular: "+dash(c.phone)+"\nSMS automático: "+(c.smsEnabled?"Sí":"No")+" · Préstamos activos: "+loans+"\nSaldo total: "+MessageBuilder.money(bal);card.addView(text(info,14,Typeface.NORMAL),margins(-1,-2,0,5,0,7));
++        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);Button open=small("Ficha"),newLoan=small("Préstamo"),edit=small("Editar"),remove=small("Eliminar");row.addView(open,weight44());row.addView(newLoan,weight44());row.addView(edit,weight44());row.addView(remove,weight44());card.addView(row);
++        open.setOnClickListener(v->showCustomerSheet(c));newLoan.setOnClickListener(v->{prepareNewLoan(c,null);showPanel(loanPanel);});edit.setOnClickListener(v->editCustomer(c));remove.setOnClickListener(v->confirmRemoveCustomer(c));return card;
+     }
+ 
+     private void showCustomerSheet(Client c){
+@@ -264,7 +282,7 @@
+     }
+ 
+     private View detailLoanCard(Client c,Loan l){
+-        LinearLayout card=card();TextView h=text(l.type+" #"+l.id,16,Typeface.BOLD);h.setTextColor(green);card.addView(h);String info="Estado: "+l.status+" · "+loanStatus(l)+"\nMonto: "+MessageBuilder.money(l.principal)+" · Total financiado: "+MessageBuilder.money(l.totalFinanced)+"\nPlan: "+l.installmentCount+" cuotas "+l.frequency.toLowerCase()+"s de "+MessageBuilder.money(l.installment)+"\nCuotas completas: "+l.paidInstallments+" / "+l.installmentCount+" · Parcial actual: "+MessageBuilder.money(l.currentInstallmentPaid)+"\nSaldo: "+MessageBuilder.money(l.balance)+" · Próximo venc.: "+pretty(l.dueDate)+"\nMora: "+trim(l.dailyInterest)+"% diario · Gracia: "+l.graceDays+" días";if(!l.notes.isEmpty())info+="\nObs.: "+l.notes;card.addView(text(info,13,Typeface.NORMAL));
++        LinearLayout card=card();TextView h=text(l.type+" #"+l.id,16,Typeface.BOLD);h.setTextColor(green);card.addView(h);String info="Estado: "+l.status+" · "+loanStatus(l)+"\nMonto entregado: "+MessageBuilder.money(l.principal)+"\nInterés: "+trim(l.periodInterest)+"% por período · Interés total pactado: "+MessageBuilder.money(Math.max(0,l.totalFinanced-l.principal))+"\nTotal financiado: "+MessageBuilder.money(l.totalFinanced)+"\nPlan: "+l.installmentCount+" cuotas "+l.frequency.toLowerCase()+"s de "+MessageBuilder.money(l.installment)+"\nCuotas completas: "+l.paidInstallments+" / "+l.installmentCount+" · Parcial actual: "+MessageBuilder.money(l.currentInstallmentPaid)+"\nSaldo: "+MessageBuilder.money(l.balance)+" · Próximo venc.: "+pretty(l.dueDate)+"\nDías de gracia: "+l.graceDays+" · Mora luego de la gracia: "+trim(l.dailyInterest)+"% diario";if(!l.notes.isEmpty())info+="\nObs.: "+l.notes;card.addView(text(info,13,Typeface.NORMAL));
+         Button hist=secondary("Historial de pagos");hist.setOnClickListener(v->showHistory(c,l));card.addView(hist,margins(-1,dp(44),0,4,0,0));if("ACTIVO".equals(l.status)){LinearLayout r=new LinearLayout(this);r.setOrientation(LinearLayout.HORIZONTAL);Button pay=small("Pago"),renew=small("Renovar"),refi=small("Refinanciar");r.addView(pay,weight44());r.addView(renew,weight44());r.addView(refi,weight44());card.addView(r);pay.setOnClickListener(v->askPayment(c,l));renew.setOnClickListener(v->{prepareNewLoan(c,l);showPanel(loanPanel);});refi.setOnClickListener(v->prepareRefinance(c,l));}return card;
+     }
+ 
+@@ -276,6 +294,18 @@
+         LinearLayout box=panel();EditText date=input("Fecha",false);date.setFocusable(false);date.setClickable(true);date.setText(l.commitmentDate.isEmpty()?LocalDate.now().plusDays(1).toString():l.commitmentDate);date.setOnClickListener(v->pickDate(date));EditText val=input("Monto comprometido",true);if(l.commitmentAmount>0)val.setText(String.valueOf(Math.round(l.commitmentAmount)));else val.setText(String.valueOf(Math.round(MessageBuilder.currentInstallmentPending(l))));box.addView(date);box.addView(val);new AlertDialog.Builder(this).setTitle("Compromiso · "+c.name).setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Guardar",(d,w)->{try{LocalDate.parse(date.getText().toString());db.setCommitment(l.id,date.getText().toString(),num(val,0));refreshAll();toast("Compromiso guardado");}catch(Exception e){toast("Fecha inválida");}}).show();
+     }
+ 
++    private void addCustomerIndependent(){
++        LinearLayout box=panel();EditText n=input("Nombre y apellido *",false),d=input("DNI",false),ph=input("Celular con código país *",false),b=input("Comercio / emprendimiento",false),a=input("Domicilio / localidad",false),g=input("Garante",false),no=input("Observaciones",false);CheckBox sms=new CheckBox(this);sms.setText("Cliente autoriza recordatorios SMS automáticos");
++        box.addView(n);box.addView(d);box.addView(ph);box.addView(sms);box.addView(b);box.addView(a);box.addView(g);box.addView(no);
++        AlertDialog dlg=new AlertDialog.Builder(this).setTitle("Agregar cliente").setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Guardar",null).create();
++        dlg.setOnShowListener(x->dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String nn=n.getText().toString().trim(),pp=ph.getText().toString().trim();if(nn.isEmpty()||pp.isEmpty()){toast("Completá nombre y celular");return;}long id=db.addCustomer(nn,d.getText().toString().trim(),pp,b.getText().toString().trim(),a.getText().toString().trim(),g.getText().toString().trim(),no.getText().toString().trim(),sms.isChecked());if(id>0){dlg.dismiss();refreshAll();showPanel(customersPanel);toast("Cliente agregado");}else toast("No se pudo guardar el cliente");}));dlg.show();
++    }
++
++    private void confirmRemoveCustomer(Client c){
++        boolean hasHistory=db.customerHasHistory(c.id);String title=hasHistory?"Archivar cliente":"Eliminar cliente";String msg=hasHistory?"Este cliente tiene préstamos o movimientos registrados. Para proteger la contabilidad no se borrará: quedará archivado y conservará todo su historial.":"Este cliente no tiene préstamos registrados. ¿Querés eliminarlo definitivamente?";
++        new AlertDialog.Builder(this).setTitle(title).setMessage(msg).setNegativeButton("Cancelar",null).setPositiveButton(hasHistory?"Archivar":"Eliminar",(d,w)->{if(hasHistory){db.archiveCustomer(c.id);toast("Cliente archivado");}else{db.deleteCustomer(c.id);toast("Cliente eliminado");}refreshAll();showPanel(customersPanel);}).show();
++    }
++
+     private void editCustomer(Client c){
+         LinearLayout box=panel();EditText n=input("Nombre",false);n.setText(c.name);EditText d=input("DNI",false);d.setText(c.dni);EditText ph=input("Celular",false);ph.setText(c.phone);CheckBox sms=new CheckBox(this);sms.setText("Cliente autoriza recordatorios SMS automáticos");sms.setChecked(c.smsEnabled);EditText b=input("Comercio",false);b.setText(c.business);EditText a=input("Domicilio",false);a.setText(c.address);EditText g=input("Garante",false);g.setText(c.guarantor);EditText no=input("Observaciones",false);no.setText(c.notes);box.addView(n);box.addView(d);box.addView(ph);box.addView(sms);box.addView(b);box.addView(a);box.addView(g);box.addView(no);new AlertDialog.Builder(this).setTitle("Editar cliente").setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Guardar",(x,w)->{if(n.getText().toString().trim().isEmpty()){toast("El nombre es obligatorio");return;}db.updateCustomer(c.id,n.getText().toString().trim(),d.getText().toString().trim(),ph.getText().toString().trim(),b.getText().toString().trim(),a.getText().toString().trim(),g.getText().toString().trim(),no.getText().toString().trim(),sms.isChecked());refreshAll();toast("Cliente actualizado");}).show();
+     }
+--- PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
++++ PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
+@@ -232,10 +232,18 @@
+ 
+     public List<Client> getCustomers() {
+         List<Client> out = new ArrayList<>();
+-        Cursor c = getReadableDatabase().rawQuery("SELECT id,name,dni,phone,business,address,guarantor,notes,active,sms_enabled,created_date FROM customers ORDER BY name COLLATE NOCASE",null);
++        Cursor c = getReadableDatabase().rawQuery("SELECT id,name,dni,phone,business,address,guarantor,notes,active,sms_enabled,created_date FROM customers WHERE active=1 ORDER BY name COLLATE NOCASE",null);
+         while(c.moveToNext()) out.add(clientFromCursor(c)); c.close(); return out;
+     }
+ 
++    public boolean customerHasHistory(long clientId){
++        Cursor c=getReadableDatabase().rawQuery("SELECT COUNT(*) FROM loans WHERE client_id=?",new String[]{String.valueOf(clientId)});int n=c.moveToFirst()?c.getInt(0):0;c.close();return n>0;
++    }
++
++    public void archiveCustomer(long clientId){ContentValues v=new ContentValues();v.put("active",0);getWritableDatabase().update("customers",v,"id=?",new String[]{String.valueOf(clientId)});}
++
++    public void deleteCustomer(long clientId){if(customerHasHistory(clientId))return;getWritableDatabase().delete("customers","id=?",new String[]{String.valueOf(clientId)});}
++
+     public Client getCustomer(long id) {
+         Cursor c = getReadableDatabase().rawQuery("SELECT id,name,dni,phone,business,address,guarantor,notes,active,sms_enabled,created_date FROM customers WHERE id=?",new String[]{String.valueOf(id)});
+         Client x = c.moveToFirst()?clientFromCursor(c):null; c.close(); return x;
+--- PressFran_Cobranzas_Android/app/build.gradle
++++ PressFran_Cobranzas_Android/app/build.gradle
+@@ -7,11 +7,11 @@
+     compileSdk 35
+ 
+     defaultConfig {
+-        applicationId "com.pressfran.cobranzas.finance"
++        applicationId "com.pressfran.cobranzas.finance.v24"
+         minSdk 26
+         targetSdk 35
+-        versionCode 5
+-        versionName "2.3-financiera"
++        versionCode 6
++        versionName "2.4-clientes-detalle"
+     }
+ 
+     buildFeatures {
