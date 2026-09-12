@@ -60,7 +60,6 @@ jobs:
           Path('v21/project.b64').write_text(''.join(parts))
           PY
           base64 -d v21/project.b64 > v21/project.zip
-          unzip -t v21/project.zip
           unzip -q v21/project.zip
 
       - name: Apply stable v2.2 SMS base
@@ -79,11 +78,10 @@ jobs:
           gzip -dc v23files-gz/ReminderReceiver.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/ReminderReceiver.java
           cp v23files/FinanceSummary.java PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/FinanceSummary.java
 
-      - name: Apply v2.4 client and loan-detail source files
+      - name: Apply v2.4 client and loan-detail patch
         run: |
-          cp v24files/app-build.gradle PressFran_Cobranzas_Android/app/build.gradle
-          gzip -dc v24files-gz/DbHelper.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
-          gzip -dc v24files-gz/MainActivity.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+          patch -p0 < v24.patch
+          grep -q 'applicationId "com.pressfran.cobranzas.finance.v24"' PressFran_Cobranzas_Android/app/build.gradle
           grep -q 'versionName "2.4-clientes-detalle"' PressFran_Cobranzas_Android/app/build.gradle
           grep -q 'Agregar cliente' PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
           grep -q 'Interés total pactado' PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
