@@ -79,28 +79,27 @@ jobs:
           gzip -dc v23files-gz/ReminderReceiver.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/ReminderReceiver.java
           cp v23files/FinanceSummary.java PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/FinanceSummary.java
 
-      - name: Export reconstructed v2.3 source
-        run: zip -qr PressFran-v2.3-reconstructed-source.zip PressFran_Cobranzas_Android
-
-      - name: Upload reconstructed source
-        uses: actions/upload-artifact@v4
-        with:
-          name: PressFran-v2.3-reconstructed-source
-          path: PressFran-v2.3-reconstructed-source.zip
-          if-no-files-found: error
-          retention-days: 7
+      - name: Apply v2.4 client and loan-detail source files
+        run: |
+          cp v24files/app-build.gradle PressFran_Cobranzas_Android/app/build.gradle
+          gzip -dc v24files-gz/DbHelper.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
+          gzip -dc v24files-gz/MainActivity.java.gz > PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+          grep -q 'versionName "2.4-clientes-detalle"' PressFran_Cobranzas_Android/app/build.gradle
+          grep -q 'Agregar cliente' PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+          grep -q 'Interés total pactado' PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/MainActivity.java
+          grep -q 'customerHasHistory' PressFran_Cobranzas_Android/app/src/main/java/com/pressfran/cobranzas/DbHelper.java
 
       - name: Build APK
         working-directory: PressFran_Cobranzas_Android
         run: gradle --no-daemon assembleDebug
 
       - name: Rename APK
-        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.3-Baseline.apk
+        run: cp PressFran_Cobranzas_Android/app/build/outputs/apk/debug/app-debug.apk PressFran-Cobranzas-v2.4-Clientes-Detalle.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PressFran-Cobranzas-v2.3-Baseline
-          path: PressFran-Cobranzas-v2.3-Baseline.apk
+          name: PressFran-Cobranzas-v2.4-Clientes-Detalle
+          path: PressFran-Cobranzas-v2.4-Clientes-Detalle.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
